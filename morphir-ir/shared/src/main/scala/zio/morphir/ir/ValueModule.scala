@@ -144,6 +144,13 @@ object ValueModule {
       override lazy val caseValue: LambdaCase[Value[Annotations]] = LambdaCase(pattern, body)
     }
 
+    final case class List[+Annotations](
+        elements: Chunk[Value[Annotations]],
+        annotations: ZEnvironment[Annotations]
+    ) extends Value[Annotations] {
+      override lazy val caseValue: ListCase[Value[Annotations]] = ListCase(elements)
+    }
+
     final case class Literal[+V, +Annotations](value: Lit[V], annotations: ZEnvironment[Annotations])
         extends Value[Annotations] {
       def caseValue: LiteralCase = ValueCase.LiteralCase(value)
@@ -154,17 +161,40 @@ object ValueModule {
     }
     object Pattern {
       import ValueCase.PatternCase.*
-      // val unit: UnitPattern[Any] = UnitPattern(ZEnvironment.empty)
-      // def unit[Annotations](annotations: ZEnvironment[Annotations]): UnitPattern[Annotations] = UnitPattern(annotations)
-      // val wildcard: Wildcard[Any] = Wildcard(ZEnvironment.empty)
-      // def wildcard[Annotations](annotations: ZEnvironment[Annotations]): Wildcard[Annotations] = Wildcard(annotations)
+      def asPattern(pattern: Pattern[Any], variableName: String): AsPattern[Any] =
+        AsPattern(pattern, Name.fromString(variableName), ZEnvironment.empty)
+
+      def asPattern(pattern: Pattern[Any], variableName: Name): AsPattern[Any] =
+        AsPattern(pattern, variableName, ZEnvironment.empty)
+
+      val unitPattern: UnitPattern[Any] = UnitPattern(ZEnvironment.empty)
+      def unitPattern[Annotations](annotations: ZEnvironment[Annotations]): UnitPattern[Annotations] = UnitPattern(
+        annotations
+      )
+      val wildcardPattern: WildcardPattern[Any] = WildcardPattern(ZEnvironment.empty)
+      def wildcardPattern[Annotations](annotations: ZEnvironment[Annotations]): WildcardPattern[Annotations] =
+        WildcardPattern(
+          annotations
+        )
+
+      final case class AsPattern[+Annotations](
+          pattern: Pattern[Annotations],
+          name: Name,
+          annotations: ZEnvironment[Annotations]
+      ) extends Pattern[Annotations] {
+        override lazy val caseValue: PatternCase[Pattern[Annotations]] =
+          PatternCase.AsPatternCase(pattern, name)
+      }
 
       // final case class LiteralPattern[+Annotations, +Value](value: Lit[Value], annotations: ZEnvironment[Annotations])
       //     extends Pattern[Annotations]
 
-      // final case class UnitPattern[+Annotations](annotations: ZEnvironment[Annotations]) extends Pattern[Annotations]
-      final case class Wildcard[+Annotations](annotations: ZEnvironment[Annotations]) extends Pattern[Annotations] {
-        override def caseValue: WildcardPatternCase = WildcardPatternCase
+      final case class UnitPattern[+Annotations](annotations: ZEnvironment[Annotations]) extends Pattern[Annotations] {
+        override lazy val caseValue: PatternCase[Value[Annotations]] = UnitPatternCase
+      }
+      final case class WildcardPattern[+Annotations](annotations: ZEnvironment[Annotations])
+          extends Pattern[Annotations] {
+        override lazy val caseValue: WildcardPatternCase = WildcardPatternCase
       }
     }
 

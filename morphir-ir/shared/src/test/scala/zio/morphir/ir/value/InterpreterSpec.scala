@@ -5,13 +5,12 @@ import zio.test.*
 import zio.morphir.ir.Literal
 import zio.morphir.ir.LiteralValue
 import zio.morphir.ir.Name
-import zio.{Chunk, ZEnvironment}
+import zio.Chunk
 import zio.morphir.ir.ValueModule.{Value, ValueCase}
 import zio.morphir.ir.NativeFunction
 import zio.morphir.ir.testing.MorphirBaseSpec
 import zio.morphir.syntax.ValueSyntax
 import zio.morphir.Dsl
-import ValueCase.PatternCase
 
 object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
   def spec = suite("Interpreter")(
@@ -105,22 +104,19 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
   }
 
   val applyFieldFunction: Value[Any] =
-    Dsl.apply(Value(ValueCase.FieldFunctionCase(Name.fromString("fieldA"))), recordCaseExample)
+    apply(Value(ValueCase.FieldFunctionCase(Name.fromString("fieldA"))), record("fieldA" -> string("hello")))
 
   val additionExample: Value[Any] =
     Value {
       ValueCase.LetDefinitionCase(
         Name("x"),
-        Value(ValueCase.LiteralCase(LiteralValue.WholeNumber(new BigInteger("1")))),
+        int(1),
         Value(
           ValueCase.LetDefinitionCase(
             Name("y"),
-            Value(ValueCase.LiteralCase(LiteralValue.WholeNumber(new BigInteger("2")))),
+            int(2),
             Value(
-              ValueCase.NativeApplyCase(
-                NativeFunction.Addition,
-                Chunk(Value(ValueCase.VariableCase(Name("x"))), Value(ValueCase.VariableCase(Name("y"))))
-              )
+              ValueCase.NativeApplyCase(NativeFunction.Addition, Chunk(variable("x"), variable("y")))
             )
           )
         )
@@ -157,15 +153,7 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
       )
     )
 
-  val listCaseExample: Value[Any] =
-    Value(
-      ValueCase.ListCase(
-        Chunk(
-          Value(ValueCase.LiteralCase(LiteralValue.String("hello"))),
-          Value(ValueCase.LiteralCase(LiteralValue.String("world")))
-        )
-      )
-    )
+  val listCaseExample: Value[Any] = list(string("hello"), string("world"))
 
   val ifThenElseCaseExample: Value[Any] =
     Value(
@@ -176,36 +164,22 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
       )
     )
 
-  lazy val recordCaseExample = {
-    val fieldA = Name.fromString("fieldA")
-    val fieldB = Name.fromString("fieldB")
-
-    val value1 = Dsl.string("hello")
-    val value2 = Dsl.wholeNumber(new java.math.BigInteger("2"))
-
-    val element1 = fieldA -> value1
-    val element2 = fieldB -> value2
-    Dsl.record(element1, element2)
-  }
+  lazy val recordCaseExample = record("fieldA" -> string("hello"), "fieldB" -> int(2))
 
   val patternMatchWildcardCaseExample =
-    Dsl.patternMatch(
-      Dsl.wholeNumber(new java.math.BigInteger("42")),
-      Value(PatternCase.WildcardPatternCase, ZEnvironment.empty) -> Dsl.wholeNumber(
-        new java.math.BigInteger("100")
-      )
+    patternMatch(
+      string("100"),
+      wildcardPattern -> int(100)
     )
 
   val patternMatchAsCasExample =
-    Dsl.patternMatch(
-      Dsl.wholeNumber(new java.math.BigInteger("42")),
-      Value(
-        PatternCase.AsPatternCase(Value(PatternCase.WildcardPatternCase, ZEnvironment.empty), Name.fromString("x")),
-        ZEnvironment.empty
-      ) -> Dsl.variable(Name.fromString("x"))
+    patternMatch(
+      long(42),
+      asPattern(wildcardPattern, "x") -> variable("x")
     )
 
-  val applyWithWildCard = Dsl.apply(Dsl.lambda(Dsl.wildcard, Dsl.wholeNumber(new java.math.BigInteger("42"))), Dsl.unit)
+  val applyWithWildCard =
+    apply(lambda(wildcardPattern, int(42)), unit)
 
   // val patternMatchAwfulExample =
   //   Value.patternMatch(
