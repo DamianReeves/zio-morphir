@@ -10,7 +10,6 @@ import zio.morphir.ir.ValueModule.{Value, ValueCase}
 import zio.morphir.ir.NativeFunction
 import zio.morphir.ir.testing.MorphirBaseSpec
 import zio.morphir.syntax.ValueSyntax
-import zio.morphir.Dsl
 
 object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
   def spec = suite("Interpreter")(
@@ -35,7 +34,7 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
     ),
     suite("list case")(
       test("Should evaluate correctly") {
-        assertTrue(Interpreter.evaluate(listCaseExample) == Right(List("hello", "world")))
+        assertEvaluatesTo(list(string("hello"), string("world")), List("hello", "world"))
       }
     ),
     suite("if then else case")(
@@ -62,10 +61,13 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
     ),
     suite("apply case")(
       test("Apply field function") {
-        assertTrue(Interpreter.evaluate(applyFieldFunction) == Right("hello"))
+        assertEvaluatesTo(
+          apply(fieldFunction("fieldA"), record("fieldA" -> string("hello"))),
+          "hello"
+        )
       },
       test("Apply lambda with wildcard") {
-        assertTrue(Interpreter.evaluate(applyWithWildCard) == Right(new BigInteger("42")))
+        assertEvaluatesTo(apply(lambda(wildcardPattern, int(42)), unit), new BigInteger("42"))
       }
     ),
     suite("pattern matching")(
@@ -102,9 +104,6 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
     )
 
   }
-
-  val applyFieldFunction: Value[Any] =
-    apply(Value(ValueCase.FieldFunctionCase(Name.fromString("fieldA"))), record("fieldA" -> string("hello")))
 
   val additionExample: Value[Any] =
     Value {
@@ -153,8 +152,6 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
       )
     )
 
-  val listCaseExample: Value[Any] = list(string("hello"), string("world"))
-
   val ifThenElseCaseExample: Value[Any] =
     Value(
       ValueCase.IfThenElseCase(
@@ -178,9 +175,6 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
       asPattern(wildcardPattern, "x") -> variable("x")
     )
 
-  val applyWithWildCard =
-    apply(lambda(wildcardPattern, int(42)), unit)
-
   // val patternMatchAwfulExample =
   //   Value.patternMatch(
   //     Value.wholeNumber(new java.math.BigInteger("7")),
@@ -195,4 +189,7 @@ object InterpreterSpec extends MorphirBaseSpec with ValueSyntax {
   //         Chunk(Value(ValueCase.VariableCase(Name("x"))), Value(ValueCase.VariableCase(Name("y"))))
   //       )
   //   )
+  def assertEvaluatesTo[A](value: Value[Any], expected: A) = {
+    assertTrue(Interpreter.evaluate(value) == Right(expected))
+  }
 }

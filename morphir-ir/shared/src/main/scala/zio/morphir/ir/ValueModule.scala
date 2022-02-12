@@ -136,6 +136,11 @@ object ValueModule {
       override lazy val caseValue: ValueCase[Value[Annotations]] = FieldCase(target, name)
     }
 
+    final case class FieldFunction[+Annotations](name: Name, annotations: ZEnvironment[Annotations])
+        extends Value[Annotations] {
+      override lazy val caseValue: FieldFunctionCase = FieldFunctionCase(name)
+    }
+
     final case class Lambda[+Annotations](
         pattern: Pattern[Annotations],
         body: Value[Annotations],
@@ -177,6 +182,15 @@ object ValueModule {
           annotations
         )
 
+      /**
+       * Assigns a variable name to the value matched by the nested pattern. For example in Elm this would be:
+       * {{{
+       *   (...) as foo
+       * }}}
+       * ==Special Case==
+       * When there is just a variable name in a pattern in Elm it will be represented as a `WildcardPattern` wrapped in
+       * an `AsPattern`.
+       */
       final case class AsPattern[+Annotations](
           pattern: Pattern[Annotations],
           name: Name,
@@ -186,12 +200,23 @@ object ValueModule {
           PatternCase.AsPatternCase(pattern, name)
       }
 
+      final case class ConstructorPattern[+Annotations](
+          constructorName: FQName,
+          argumentPatterns: Chunk[Pattern[Annotations]],
+          annotations: ZEnvironment[Annotations]
+      ) extends Pattern[Annotations] {
+        override lazy val caseValue: PatternCase.ConstructorPatternCase[Pattern[Annotations]] =
+          PatternCase.ConstructorPatternCase(constructorName, argumentPatterns)
+      }
+
       // final case class LiteralPattern[+Annotations, +Value](value: Lit[Value], annotations: ZEnvironment[Annotations])
       //     extends Pattern[Annotations]
 
       final case class UnitPattern[+Annotations](annotations: ZEnvironment[Annotations]) extends Pattern[Annotations] {
         override lazy val caseValue: PatternCase[Value[Annotations]] = UnitPatternCase
       }
+
+      /** Matches any value and does not extract any variables. */
       final case class WildcardPattern[+Annotations](annotations: ZEnvironment[Annotations])
           extends Pattern[Annotations] {
         override lazy val caseValue: WildcardPatternCase = WildcardPatternCase
@@ -297,12 +322,12 @@ object ValueModule {
     object PatternCase {
 
       final case class AsPatternCase[+Self](pattern: Self, name: Name) extends PatternCase[Self]
-      final case class ConstructorPatternCase[+Self](constructorName: FQName, argumentPatterns: List[Self])
+      final case class ConstructorPatternCase[+Self](constructorName: FQName, argumentPatterns: Chunk[Self])
           extends PatternCase[Self]
       case object EmptyListPatternCase                                    extends PatternCase[Nothing]
       final case class HeadTailPatternCase[+Self](head: Self, tail: Self) extends PatternCase[Self]
       final case class LiteralPatternCase(value: Literal[Nothing])        extends PatternCase[Nothing]
-      final case class TuplePatternCase[+Self](elements: List[Self])      extends PatternCase[Self]
+      final case class TuplePatternCase[+Self](elements: Chunk[Self])     extends PatternCase[Self]
       case object UnitPatternCase                                         extends PatternCase[Nothing]
       type WildcardPatternCase = WildcardPatternCase.type
       case object WildcardPatternCase extends PatternCase[Nothing]

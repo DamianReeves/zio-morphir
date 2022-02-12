@@ -4,6 +4,7 @@ import zio.{Chunk, ZEnvironment}
 import zio.morphir.ir.{Literal => Lit, Name, ValueModule}
 import ValueModule.{RawValue, Value}
 import java.math.BigInteger
+import zio.morphir.ir.FQName
 
 trait ValueSyntax {
   import Value.{List => _, *}
@@ -24,9 +25,19 @@ trait ValueSyntax {
   ): Literal[Boolean, Annotations] =
     Literal(Lit.boolean(value), annotations)
 
+  final def constructorPattern(
+      constructorName: FQName,
+      argumentPatterns: Pattern[Any]*
+  ): Pattern.ConstructorPattern[Any] =
+    Pattern.ConstructorPattern(constructorName, Chunk.fromIterable(argumentPatterns), ZEnvironment.empty)
+
   final def field(name: Name, record: Record[Any]): Field[Any] = Field(record, name, ZEnvironment.empty)
   final def field(name: String, record: Record[Any]): Field[Any] =
     Field(record, Name.fromString(name), ZEnvironment.empty)
+
+  final def fieldFunction(name: Name): FieldFunction[Any] = FieldFunction(name, ZEnvironment.empty)
+  final def fieldFunction(name: String): FieldFunction[Any] =
+    FieldFunction(Name.fromString(name), ZEnvironment.empty)
 
   final def int(value: Int): Literal[BigInteger, Any] = Literal(Lit.int(value), ZEnvironment.empty)
 
